@@ -37,6 +37,11 @@
       text-align: center;
     }
 
+    .instructions {
+      margin-bottom: 20px;
+      margin-left: 20px;
+    }
+
     .container {
       display: flex;
       justify-content: space-between;
@@ -168,10 +173,16 @@
 </head>
 <body>
   <h1>Traveller RPG Combat Un-Balancer</h1>
-  <p class="subtitle">Space is Hell... War is even worse...
-  <p class="subtitle">This is a naive Traveller RPG combat calculator. It does not account for missed shots, multiple weapons, dodging, taking cover, etc... It's mostly here to make sure your enemies don't get annihilated in the first round.</p>
-  <p class="subtitle">Instructions:</p>
-  <p class="subtitle">For HP, enter the total sum of END + DEX + STR. For Damage, enter it in the form of 1D, 2D+3, 3D-2, etc...</p>
+  <p class="subtitle">Space is Hell... War is even worse...</p>
+  <p>
+    This is a naive Traveller RPG combat calculator. It does not account for missed shots, multiple weapons, dodging, taking cover, etc.
+    Its primary purpose is to ensure your enemies don't get annihilated in the first round.
+  </p>
+  <h3>Instructions:</h3>
+  <ul class="instructions">
+    <li><strong>HP:</strong> Enter the total sum of END + DEX + STR.</li>
+    <li><strong>Damage:</strong> Enter it in the form of 1D, 2D+3, 3D-2, etc...</li>
+  </ul>
   <div class="container">
     <div class="column" id="playersColumn">
       <h2>Players</h2>
