@@ -316,11 +316,12 @@
     }
 
     function parseDamage(damageStr) {
-      const regex = /(\d+)[dD]\s*\+?\s*(\d+)?/;
+      const regex = /(\d+)[dD]\s*([+-]\s*\d+)?/;
       const match = damageStr.match(regex);
       if (match) {
         const diceCount = parseFloat(match[1] || 0);
-        const modifier = parseFloat(match[2] || 0);
+        // Remove whitespace from the modifier and parse it; default to 0 if not present
+        const modifier = match[2] ? parseFloat(match[2].replace(/\s+/g, '')) : 0;
         return diceCount * 3.5 + modifier;
       }
       return 0;
