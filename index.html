@@ -302,23 +302,21 @@
       let playersAlive = players.map(p => ({ ...p }));
       let enemiesAlive = enemies.map(e => ({ ...e }));
 
-      // Run simulation until one side is eliminated
       while (playersAlive.length > 0 && enemiesAlive.length > 0) {
         turn++;
         let turnLogs = [];
-        let turnPlayersDamage = 0;
-        let turnEnemiesDamage = 0;
 
         // Players attack
         for (let i = 0; i < playersAlive.length; i++) {
           if (enemiesAlive.length === 0) break;
           const attacker = playersAlive[i];
-          const targetIndex = i % enemiesAlive.length;
+          // Randomly select an enemy target
+          const targetIndex = Math.floor(Math.random() * enemiesAlive.length);
           const target = enemiesAlive[targetIndex];
+
           const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
           const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
           target.hp -= netDamage;
-          turnPlayersDamage += netDamage;
 
           let event = `Player ${i + 1} attacked Enemy ${targetIndex + 1} for ${netDamage.toFixed(2)} damage.`;
           if (target.hp <= 0) {
@@ -333,12 +331,13 @@
         for (let j = 0; j < enemiesAlive.length; j++) {
           if (playersAlive.length === 0) break;
           const attacker = enemiesAlive[j];
-          const targetIndex = j % playersAlive.length;
+          // Randomly select a player target
+          const targetIndex = Math.floor(Math.random() * playersAlive.length);
           const target = playersAlive[targetIndex];
+
           const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
           const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
           target.hp -= netDamage;
-          turnEnemiesDamage += netDamage;
 
           let event = `Enemy ${j + 1} attacked Player ${targetIndex + 1} for ${netDamage.toFixed(2)} damage.`;
           if (target.hp <= 0) {
@@ -349,7 +348,7 @@
           turnLogs.push(event);
         }
 
-        // Record deaths for first death turn, if not already set
+        // Record first death turns
         if (firstPlayerDeathTurn === null && totalPlayersDied > 0) {
           firstPlayerDeathTurn = turn;
         }
@@ -360,7 +359,6 @@
         allLogs.push(`Turn ${turn}:\n` + turnLogs.join("\n"));
       }
 
-      // Determine which side was eliminated
       let eliminatedSide = '';
       if (playersAlive.length === 0 && enemiesAlive.length === 0) {
         eliminatedSide = 'Both sides eliminated simultaneously';
@@ -382,7 +380,6 @@
         </div>
       `;
     }
-
   </script>
 </body>
 </html>
