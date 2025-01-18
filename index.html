@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <!-- Viewport meta tag for responsive design -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Traveller RPG Combat Un-Balancer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background-color: #0e0e0e;
+      color: #e0e0e0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #00ffea;
+      text-shadow: 0 0 10px #00ffea, 0 0 20px #00ffea;
+    }
+
+    .subtitle {
+      font-weight: 400;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .container {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .column {
+      width: 48%;
+      background-color: #1e1e1e;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 255, 234, 0.2);
+    }
+
+    .column h2 {
+      margin-bottom: 10px;
+      color: #00ffe3;
+      text-shadow: 0 0 5px #00ffe3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+      table-layout: fixed;
+    }
+
+    th, td {
+      padding: 8px;
+      border: 1px solid #333;
+      text-align: center;
+      word-wrap: break-word;
+    }
+
+    th {
+      background-color: #2e2e2e;
+      color: #00ffea;
+    }
+
+    tr:nth-child(even) {
+      background-color: #2a2a2a;
+    }
+
+    tr:hover {
+      background-color: #383838;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      background-color: #00ffea;
+      border: none;
+      border-radius: 4px;
+      color: #0e0e0e;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 0 5px #00ffea;
+    }
+
+    button:hover {
+      background-color: #00d1c1;
+    }
+
+    .remove-btn {
+      background-color: #ff4c4c;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      box-shadow: 0 0 5px #ff4c4c;
+    }
+
+    .remove-btn:hover {
+      background-color: #e04343;
+    }
+
+    .results {
+      margin-top: 20px;
+      background-color: #1e1e1e;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0, 255, 234, 0.2);
+    }
+
+    .results h2 {
+      color: #00ffea;
+      text-shadow: 0 0 5px #00ffea;
+      margin-bottom: 10px;
+    }
+
+    .results p, .results h3 {
+      margin-bottom: 10px;
+      color: #e0e0e0;
+    }
+
+    .scrollable {
+      max-height: 200px;
+      overflow-y: auto;
+      background: #2e2e2e;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      color: #e0e0e0;
+    }
+
+    pre {
+      font-family: 'Courier New', Courier, monospace;
+      color: #a0ffa0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .column {
+        width: 100%;
+        margin-bottom: 20px; /* Add spacing between columns when stacked */
+      }
+      .container {
+        flex-direction: column;
+      }
+      th, td {
+        font-size: 0.7rem; /* Smaller font size for table headers and cells on mobile */
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Traveller RPG Combat Un-Balancer</h1>
+  <p class="subtitle">Space is Hell... War is even worse...
+  <p class="subtitle">This is a naive Traveller RPG combat calculator. It does not account for missed shots, multiple weapons, dodging, taking cover, etc... It's mostly here to make sure your enemies don't get annihilated in the first round.</p>
+  <p class="subtitle">Instructions:</p>
+  <p class="subtitle">For HP, enter the total sum of END + DEX + STR. For Damage, enter it in the form of 1D, 3D+3, 2D+2, etc...</p>
+  <div class="container">
+    <div class="column" id="playersColumn">
+      <h2>Players</h2>
+      <table id="playersTable">
+        <thead>
+          <tr>
+            <th>HP</th>
+            <th>Armor</th>
+            <th>Damage</th>
+            <th>AP</th>
+            <th>Remove</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Player rows will go here -->
+        </tbody>
+      </table>
+      <button onclick="addCharacter('playersTable')">Add Player</button>
+    </div>
+
+    <div class="column" id="enemiesColumn">
+      <h2>Enemies</h2>
+      <table id="enemiesTable">
+        <thead>
+          <tr>
+            <th>HP</th>
+            <th>Armor</th>
+            <th>Damage</th>
+            <th>AP</th>
+            <th>Remove</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Enemy rows will go here -->
+        </tbody>
+      </table>
+      <button onclick="addCharacter('enemiesTable')">Add Enemy</button>
+    </div>
+  </div>
+
+  <button onclick="simulateCombat()">Calculate</button>
+
+  <div class="results" id="resultsArea">
+    <!-- Simulation results will appear here -->
+  </div>
+
+  <script>
+    function addCharacter(tableId) {
+      const table = document.getElementById(tableId).getElementsByTagName('tbody')[0];
+      const row = table.insertRow();
+      const fields = ['hp', 'armor', 'damage', 'ap'];
+      fields.forEach(() => {
+        const cell = row.insertCell();
+        const input = document.createElement('input');
+        input.type = (fields[cell.cellIndex] === 'damage') ? 'text' : 'number';
+        input.required = true;
+        input.placeholder = fields[cell.cellIndex].toUpperCase();
+        input.style.width = '90%';
+        cell.appendChild(input);
+      });
+      const removeCell = row.insertCell();
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = 'X';
+      removeBtn.className = 'remove-btn';
+      removeBtn.onclick = () => table.deleteRow(row.rowIndex - 1);
+      removeCell.appendChild(removeBtn);
+    }
+
+    function parseDamage(damageStr) {
+      const regex = /(\d+)[dD]\s*\+?\s*(\d+)?/;
+      const match = damageStr.match(regex);
+      if (match) {
+        const diceCount = parseFloat(match[1] || 0);
+        const modifier = parseFloat(match[2] || 0);
+        return diceCount * 3.5 + modifier;
+      }
+      return 0;
+    }
+
+    function collectCharacters(tableId) {
+      const table = document.getElementById(tableId);
+      const rows = table.getElementsByTagName('tbody')[0].rows;
+      let characters = [];
+      for (let row of rows) {
+        const cells = row.cells;
+        const hp = parseFloat(cells[0].firstChild.value) || 0;
+        const armor = parseFloat(cells[1].firstChild.value) || 0;
+        const damageStr = cells[2].firstChild.value || "0";
+        const ap = parseFloat(cells[3].firstChild.value) || 0;
+        characters.push({
+          hp,
+          armor,
+          damage: parseDamage(damageStr),
+          ap
+        });
+      }
+      return characters;
+    }
+
+    function simulateCombat() {
+      let players = collectCharacters('playersTable');
+      let enemies = collectCharacters('enemiesTable');
+
+      if (players.length === 0 || enemies.length === 0) {
+        alert('Please add at least one player and one enemy.');
+        return;
+      }
+
+      let turn = 0;
+      let firstPlayerDeathTurn = null;
+      let firstEnemyDeathTurn = null;
+
+      let playersDamagePerTurn = [];
+      let enemiesDamagePerTurn = [];
+
+      let playersAlive = players.map(p => ({ ...p }));
+      let enemiesAlive = enemies.map(e => ({ ...e }));
+
+      while (playersAlive.length > 0 && enemiesAlive.length > 0) {
+        turn++;
+
+        let turnPlayersDamage = 0;
+        let turnEnemiesDamage = 0;
+
+        for (let i = 0; i < playersAlive.length; i++) {
+          if (enemiesAlive.length === 0) break;
+          const attacker = playersAlive[i];
+          const target = enemiesAlive[i % enemiesAlive.length];
+          const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
+          const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
+          target.hp -= netDamage;
+          turnPlayersDamage += netDamage;
+        }
+
+        for (let j = 0; j < enemiesAlive.length; j++) {
+          if (playersAlive.length === 0) break;
+          const attacker = enemiesAlive[j];
+          const target = playersAlive[j % playersAlive.length];
+          const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
+          const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
+          target.hp -= netDamage;
+          turnEnemiesDamage += netDamage;
+        }
+
+        playersDamagePerTurn.push(turnPlayersDamage);
+        enemiesDamagePerTurn.push(turnEnemiesDamage);
+
+        const newPlayersAlive = playersAlive.filter(p => p.hp > 0);
+        const newEnemiesAlive = enemiesAlive.filter(e => e.hp > 0);
+
+        if (firstPlayerDeathTurn === null && newPlayersAlive.length < playersAlive.length) {
+          firstPlayerDeathTurn = turn;
+        }
+        if (firstEnemyDeathTurn === null && newEnemiesAlive.length < enemiesAlive.length) {
+          firstEnemyDeathTurn = turn;
+        }
+
+        playersAlive = newPlayersAlive;
+        enemiesAlive = newEnemiesAlive;
+      }
+
+      let eliminatedSide = '';
+      if (playersAlive.length === 0 && enemiesAlive.length === 0) {
+        eliminatedSide = 'Both sides eliminated simultaneously';
+      } else if (playersAlive.length === 0) {
+        eliminatedSide = 'Players eliminated';
+      } else if (enemiesAlive.length === 0) {
+        eliminatedSide = 'Enemies eliminated';
+      }
+
+      const resultsArea = document.getElementById('resultsArea');
+      resultsArea.innerHTML = `
+        <h2>Simulation Results</h2>
+        <p><strong>First Player Death:</strong> ${firstPlayerDeathTurn !== null ? 'Turn ' + firstPlayerDeathTurn : 'No player death occurred'}</p>
+        <p><strong>First Enemy Death:</strong> ${firstEnemyDeathTurn !== null ? 'Turn ' + firstEnemyDeathTurn : 'No enemy death occurred'}</p>
+        <p><strong>${eliminatedSide}</strong> on turn ${turn}.</p>
+        <h3>Damage Inflicted Per Turn</h3>
+        <div class="scrollable">
+          <strong>Players' Damage:</strong>
+          <pre>${playersDamagePerTurn.map((dmg, idx) => `Turn ${idx + 1}: ${dmg.toFixed(2)}`).join('\n')}</pre>
+          <strong>Enemies' Damage:</strong>
+          <pre>${enemiesDamagePerTurn.map((dmg, idx) => `Turn ${idx + 1}: ${dmg.toFixed(2)}`).join('\n')}</pre>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
