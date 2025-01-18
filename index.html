@@ -171,7 +171,7 @@
   <p class="subtitle">Space is Hell... War is even worse...
   <p class="subtitle">This is a naive Traveller RPG combat calculator. It does not account for missed shots, multiple weapons, dodging, taking cover, etc... It's mostly here to make sure your enemies don't get annihilated in the first round.</p>
   <p class="subtitle">Instructions:</p>
-  <p class="subtitle">For HP, enter the total sum of END + DEX + STR. For Damage, enter it in the form of 1D, 3D+3, 2D+2, etc...</p>
+  <p class="subtitle">For HP, enter the total sum of END + DEX + STR. For Damage, enter it in the form of 1D, 2D+3, 3D-2, etc...</p>
   <div class="container">
     <div class="column" id="playersColumn">
       <h2>Players</h2>
@@ -284,55 +284,73 @@
       let firstPlayerDeathTurn = null;
       let firstEnemyDeathTurn = null;
 
-      let playersDamagePerTurn = [];
-      let enemiesDamagePerTurn = [];
+      let totalPlayersDied = 0;
+      let totalEnemiesDied = 0;
+      let allLogs = [];
 
+      // Deep copies for simulation
       let playersAlive = players.map(p => ({ ...p }));
       let enemiesAlive = enemies.map(e => ({ ...e }));
 
+      // Run simulation until one side is eliminated
       while (playersAlive.length > 0 && enemiesAlive.length > 0) {
         turn++;
-
+        let turnLogs = [];
         let turnPlayersDamage = 0;
         let turnEnemiesDamage = 0;
 
+        // Players attack
         for (let i = 0; i < playersAlive.length; i++) {
           if (enemiesAlive.length === 0) break;
           const attacker = playersAlive[i];
-          const target = enemiesAlive[i % enemiesAlive.length];
+          const targetIndex = i % enemiesAlive.length;
+          const target = enemiesAlive[targetIndex];
           const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
           const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
           target.hp -= netDamage;
           turnPlayersDamage += netDamage;
+
+          let event = `Player ${i + 1} attacked Enemy ${targetIndex + 1} for ${netDamage.toFixed(2)} damage.`;
+          if (target.hp <= 0) {
+            event += ` Enemy ${targetIndex + 1} died.`;
+            enemiesAlive.splice(targetIndex, 1);
+            totalEnemiesDied++;
+          }
+          turnLogs.push(event);
         }
 
+        // Enemies attack
         for (let j = 0; j < enemiesAlive.length; j++) {
           if (playersAlive.length === 0) break;
           const attacker = enemiesAlive[j];
-          const target = playersAlive[j % playersAlive.length];
+          const targetIndex = j % playersAlive.length;
+          const target = playersAlive[targetIndex];
           const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
           const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
           target.hp -= netDamage;
           turnEnemiesDamage += netDamage;
+
+          let event = `Enemy ${j + 1} attacked Player ${targetIndex + 1} for ${netDamage.toFixed(2)} damage.`;
+          if (target.hp <= 0) {
+            event += ` Player ${targetIndex + 1} died.`;
+            playersAlive.splice(targetIndex, 1);
+            totalPlayersDied++;
+          }
+          turnLogs.push(event);
         }
 
-        playersDamagePerTurn.push(turnPlayersDamage);
-        enemiesDamagePerTurn.push(turnEnemiesDamage);
-
-        const newPlayersAlive = playersAlive.filter(p => p.hp > 0);
-        const newEnemiesAlive = enemiesAlive.filter(e => e.hp > 0);
-
-        if (firstPlayerDeathTurn === null && newPlayersAlive.length < playersAlive.length) {
+        // Record deaths for first death turn, if not already set
+        if (firstPlayerDeathTurn === null && totalPlayersDied > 0) {
           firstPlayerDeathTurn = turn;
         }
-        if (firstEnemyDeathTurn === null && newEnemiesAlive.length < enemiesAlive.length) {
+        if (firstEnemyDeathTurn === null && totalEnemiesDied > 0) {
           firstEnemyDeathTurn = turn;
         }
 
-        playersAlive = newPlayersAlive;
-        enemiesAlive = newEnemiesAlive;
+        allLogs.push(`Turn ${turn}:\n` + turnLogs.join("\n"));
       }
 
+      // Determine which side was eliminated
       let eliminatedSide = '';
       if (playersAlive.length === 0 && enemiesAlive.length === 0) {
         eliminatedSide = 'Both sides eliminated simultaneously';
@@ -345,18 +363,16 @@
       const resultsArea = document.getElementById('resultsArea');
       resultsArea.innerHTML = `
         <h2>Simulation Results</h2>
-        <p><strong>First Player Death:</strong> ${firstPlayerDeathTurn !== null ? 'Turn ' + firstPlayerDeathTurn : 'No player death occurred'}</p>
-        <p><strong>First Enemy Death:</strong> ${firstEnemyDeathTurn !== null ? 'Turn ' + firstEnemyDeathTurn : 'No enemy death occurred'}</p>
+        <p><strong>Total Players Died:</strong> ${totalPlayersDied}</p>
+        <p><strong>Total Enemies Died:</strong> ${totalEnemiesDied}</p>
         <p><strong>${eliminatedSide}</strong> on turn ${turn}.</p>
-        <h3>Damage Inflicted Per Turn</h3>
+        <h3>Detailed Turn-by-Turn Log</h3>
         <div class="scrollable">
-          <strong>Players' Damage:</strong>
-          <pre>${playersDamagePerTurn.map((dmg, idx) => `Turn ${idx + 1}: ${dmg.toFixed(2)}`).join('\n')}</pre>
-          <strong>Enemies' Damage:</strong>
-          <pre>${enemiesDamagePerTurn.map((dmg, idx) => `Turn ${idx + 1}: ${dmg.toFixed(2)}`).join('\n')}</pre>
+          <pre>${allLogs.join("\n\n")}</pre>
         </div>
       `;
     }
+
   </script>
 </body>
 </html>
