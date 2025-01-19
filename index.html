@@ -305,6 +305,14 @@
   </div>
 
   <script>
+    // Utility: Shuffle an array in place
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
     function addCharacter(tableId) {
       const table = document.getElementById(tableId).getElementsByTagName('tbody')[0];
       const row = table.insertRow();
@@ -331,7 +339,6 @@
       const match = damageStr.match(regex);
       if (match) {
         const diceCount = parseFloat(match[1] || 0);
-        // Remove whitespace from the modifier and parse it; default to 0 if not present
         const modifier = match[2] ? parseFloat(match[2].replace(/\s+/g, '')) : 0;
         return diceCount * 3.5 + modifier;
       }
@@ -358,7 +365,6 @@
       return characters;
     }
 
-
     function runSimulations() {
       let simulationCount = parseInt(document.getElementById('simulationCount').value) || 1;
       let playersBase = collectCharacters('playersTable');
@@ -376,49 +382,54 @@
       let totalEliminationTurnSum = 0;
 
       for (let run = 0; run < simulationCount; run++) {
-        // Create fresh copies of players and enemies for each run
         let playersAlive = playersBase.map(p => ({ ...p }));
         let enemiesAlive = enemiesBase.map(e => ({ ...e }));
         let totalPlayersDied = 0;
         let totalEnemiesDied = 0;
-        let eliminatedSide = '';
         let turn = 0;
 
         while (playersAlive.length > 0 && enemiesAlive.length > 0) {
           turn++;
 
-          // Players attack randomly
-          for (let i = 0; i < playersAlive.length; i++) {
-            if (enemiesAlive.length === 0) break;
-            let attacker = playersAlive[i];
-            let targetIndex = Math.floor(Math.random() * enemiesAlive.length);
-            let target = enemiesAlive[targetIndex];
-            let effectiveArmor = Math.max(target.armor - attacker.ap, 0);
-            let netDamage = Math.max(attacker.damage - effectiveArmor, 0);
-            target.hp -= netDamage;
-            if (target.hp <= 0) {
-              enemiesAlive.splice(targetIndex, 1);
-              totalEnemiesDied++;
-            }
-          }
+          // Combine and shuffle initiative order
+          let initiativeOrder = playersAlive.map(p => ({ type: 'player', actor: p }))
+              .concat(enemiesAlive.map(e => ({ type: 'enemy', actor: e })));
+          shuffle(initiativeOrder);
 
-          // Enemies attack randomly
-          for (let j = 0; j < enemiesAlive.length; j++) {
-            if (playersAlive.length === 0) break;
-            let attacker = enemiesAlive[j];
-            let targetIndex = Math.floor(Math.random() * playersAlive.length);
-            let target = playersAlive[targetIndex];
-            let effectiveArmor = Math.max(target.armor - attacker.ap, 0);
-            let netDamage = Math.max(attacker.damage - effectiveArmor, 0);
-            target.hp -= netDamage;
-            if (target.hp <= 0) {
-              playersAlive.splice(targetIndex, 1);
-              totalPlayersDied++;
+          for (let combatant of initiativeOrder) {
+            if (combatant.type === 'player') {
+              if (enemiesAlive.length === 0) break;
+              if (!playersAlive.includes(combatant.actor)) continue;
+
+              let attacker = combatant.actor;
+              let targetIndex = Math.floor(Math.random() * enemiesAlive.length);
+              let target = enemiesAlive[targetIndex];
+              let effectiveArmor = Math.max(target.armor - attacker.ap, 0);
+              let netDamage = Math.max(attacker.damage - effectiveArmor, 0);
+              target.hp -= netDamage;
+              if (target.hp <= 0) {
+                enemiesAlive.splice(targetIndex, 1);
+                totalEnemiesDied++;
+              }
+            } else {
+              if (playersAlive.length === 0) break;
+              if (!enemiesAlive.includes(combatant.actor)) continue;
+
+              let attacker = combatant.actor;
+              let targetIndex = Math.floor(Math.random() * playersAlive.length);
+              let target = playersAlive[targetIndex];
+              let effectiveArmor = Math.max(target.armor - attacker.ap, 0);
+              let netDamage = Math.max(attacker.damage - effectiveArmor, 0);
+              target.hp -= netDamage;
+              if (target.hp <= 0) {
+                playersAlive.splice(targetIndex, 1);
+                totalPlayersDied++;
+              }
             }
           }
         }
 
-        // Determine which side was eliminated
+        let eliminatedSide = '';
         if (playersAlive.length === 0 && enemiesAlive.length === 0) {
           eliminatedSide = 'both';
         } else if (playersAlive.length === 0) {
@@ -427,7 +438,6 @@
           eliminatedSide = 'enemies';
         }
 
-        // Aggregate statistics
         totalPlayersDiedSum += totalPlayersDied;
         totalEnemiesDiedSum += totalEnemiesDied;
         if (eliminatedSide === 'players' || eliminatedSide === 'both') {
@@ -455,12 +465,17 @@
         <p><strong>Enemies Elimination Percentage:</strong> ${enemiesEliminationPercent.toFixed(2)}%</p>
         <p><strong>Average Elimination Turn:</strong> ${avgEliminationTurn.toFixed(0)}</p>
       `;
-
     }
 
     function simulateCombat() {
       let players = collectCharacters('playersTable');
+      for (let i = 0; i < players.length; i++) {
+        players[i].id = i + 1;
+      }
       let enemies = collectCharacters('enemiesTable');
+      for (let j = 0; j < enemies.length; j++) {
+        enemies[j].id = j + 1;
+      }
 
       if (players.length === 0 || enemies.length === 0) {
         alert('Please add at least one player and one enemy.');
@@ -475,7 +490,6 @@
       let totalEnemiesDied = 0;
       let allLogs = [];
 
-      // Deep copies for simulation
       let playersAlive = players.map(p => ({ ...p }));
       let enemiesAlive = enemies.map(e => ({ ...e }));
 
@@ -483,49 +497,57 @@
         turn++;
         let turnLogs = [];
 
-        // Players attack
-        for (let i = 0; i < playersAlive.length; i++) {
-          if (enemiesAlive.length === 0) break;
-          const attacker = playersAlive[i];
-          // Randomly select an enemy target
-          const targetIndex = Math.floor(Math.random() * enemiesAlive.length);
-          const target = enemiesAlive[targetIndex];
+        // Combine and shuffle initiative order
+        let initiativeOrder = playersAlive.map(p => ({ type: 'player', actor: p }))
+            .concat(enemiesAlive.map(e => ({ type: 'enemy', actor: e })));
+        shuffle(initiativeOrder);
 
-          const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
-          const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
-          target.hp -= netDamage;
+        for (let combatant of initiativeOrder) {
+          if (combatant.type === 'player') {
+            if (enemiesAlive.length === 0) break;
+            if (!playersAlive.includes(combatant.actor)) continue;
 
-          let event = `Player ${i + 1} attacked Enemy ${targetIndex + 1} for ${netDamage.toFixed(2)} damage.`;
-          if (target.hp <= 0) {
-            event += ` Enemy ${targetIndex + 1} died.`;
-            enemiesAlive.splice(targetIndex, 1);
-            totalEnemiesDied++;
+            const attacker = combatant.actor;
+            const targetIndex = Math.floor(Math.random() * enemiesAlive.length);
+            const target = enemiesAlive[targetIndex];
+
+            const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
+            const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
+            target.hp -= netDamage;
+
+            let attackerLabel = `Player ${attacker.id}`;
+            let targetLabel = `Enemy ${target.id}`;
+            let event = `${attackerLabel} attacked ${targetLabel} for ${netDamage.toFixed(2)} damage.`;
+            if (target.hp <= 0) {
+              event += ` ${targetLabel} died.`;
+              enemiesAlive.splice(targetIndex, 1);
+              totalEnemiesDied++;
+            }
+            turnLogs.push(event);
+          } else {
+            if (playersAlive.length === 0) break;
+            if (!enemiesAlive.includes(combatant.actor)) continue;
+
+            const attacker = combatant.actor;
+            const targetIndex = Math.floor(Math.random() * playersAlive.length);
+            const target = playersAlive[targetIndex];
+
+            const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
+            const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
+            target.hp -= netDamage;
+
+            let attackerLabel = `Enemy ${attacker.id}`;
+            let targetLabel = `Player ${target.id}`;
+            let event = `${attackerLabel} attacked ${targetLabel} for ${netDamage.toFixed(2)} damage.`;
+            if (target.hp <= 0) {
+              event += ` ${targetLabel} died.`;
+              playersAlive.splice(targetIndex, 1);
+              totalPlayersDied++;
+            }
+            turnLogs.push(event);
           }
-          turnLogs.push(event);
         }
 
-        // Enemies attack
-        for (let j = 0; j < enemiesAlive.length; j++) {
-          if (playersAlive.length === 0) break;
-          const attacker = enemiesAlive[j];
-          // Randomly select a player target
-          const targetIndex = Math.floor(Math.random() * playersAlive.length);
-          const target = playersAlive[targetIndex];
-
-          const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
-          const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
-          target.hp -= netDamage;
-
-          let event = `Enemy ${j + 1} attacked Player ${targetIndex + 1} for ${netDamage.toFixed(2)} damage.`;
-          if (target.hp <= 0) {
-            event += ` Player ${targetIndex + 1} died.`;
-            playersAlive.splice(targetIndex, 1);
-            totalPlayersDied++;
-          }
-          turnLogs.push(event);
-        }
-
-        // Record first death turns
         if (firstPlayerDeathTurn === null && totalPlayersDied > 0) {
           firstPlayerDeathTurn = turn;
         }
