@@ -190,6 +190,7 @@
       color: #00ffea;
       text-shadow: 0 0 5px #00ffea;
       margin-bottom: 10px;
+      text-align: center;
     }
 
     .results p, .results h3 {
@@ -380,6 +381,8 @@
       let playersEliminationCount = 0;
       let enemiesEliminationCount = 0;
       let totalEliminationTurnSum = 0;
+      let totalDamageToPlayers = 0;
+      let totalDamageToEnemies = 0;
 
       for (let run = 0; run < simulationCount; run++) {
         let playersAlive = playersBase.map(p => ({ ...p }));
@@ -390,8 +393,6 @@
 
         while (playersAlive.length > 0 && enemiesAlive.length > 0) {
           turn++;
-
-          // Combine and shuffle initiative order
           let initiativeOrder = playersAlive.map(p => ({ type: 'player', actor: p }))
               .concat(enemiesAlive.map(e => ({ type: 'enemy', actor: e })));
           shuffle(initiativeOrder);
@@ -406,6 +407,7 @@
               let target = enemiesAlive[targetIndex];
               let effectiveArmor = Math.max(target.armor - attacker.ap, 0);
               let netDamage = Math.max(attacker.damage - effectiveArmor, 0);
+              totalDamageToEnemies += netDamage;
               target.hp -= netDamage;
               if (target.hp <= 0) {
                 enemiesAlive.splice(targetIndex, 1);
@@ -420,6 +422,7 @@
               let target = playersAlive[targetIndex];
               let effectiveArmor = Math.max(target.armor - attacker.ap, 0);
               let netDamage = Math.max(attacker.damage - effectiveArmor, 0);
+              totalDamageToPlayers += netDamage;
               target.hp -= netDamage;
               if (target.hp <= 0) {
                 playersAlive.splice(targetIndex, 1);
@@ -429,23 +432,10 @@
           }
         }
 
-        let eliminatedSide = '';
-        if (playersAlive.length === 0 && enemiesAlive.length === 0) {
-          eliminatedSide = 'both';
-        } else if (playersAlive.length === 0) {
-          eliminatedSide = 'players';
-        } else if (enemiesAlive.length === 0) {
-          eliminatedSide = 'enemies';
-        }
-
         totalPlayersDiedSum += totalPlayersDied;
         totalEnemiesDiedSum += totalEnemiesDied;
-        if (eliminatedSide === 'players' || eliminatedSide === 'both') {
-          playersEliminationCount++;
-        }
-        if (eliminatedSide === 'enemies' || eliminatedSide === 'both') {
-          enemiesEliminationCount++;
-        }
+        if (playersAlive.length === 0) playersEliminationCount++;
+        if (enemiesAlive.length === 0) enemiesEliminationCount++;
         totalEliminationTurnSum += turn;
       }
 
@@ -453,19 +443,45 @@
       let avgEnemiesDied = totalEnemiesDiedSum / simulationCount;
       let avgEliminationTurn = totalEliminationTurnSum / simulationCount;
 
-      let playersEliminationPercent = (playersEliminationCount / simulationCount) * 100;
-      let enemiesEliminationPercent = (enemiesEliminationCount / simulationCount) * 100;
+      let totalPlayerUnits = playersBase.length * simulationCount;
+      let totalEnemyUnits = enemiesBase.length * simulationCount;
+
+      let avgDamageToPlayersPerUnit = totalDamageToPlayers / totalPlayerUnits;
+      let avgDamageToEnemiesPerUnit = totalDamageToEnemies / totalEnemyUnits;
 
       const resultsArea = document.getElementById('resultsArea');
       resultsArea.innerHTML = `
         <h2>Aggregate Simulation Results (over ${simulationCount} runs)</h2>
-        <p><strong>Average Players Died:</strong> ${avgPlayersDied.toFixed(0)}</p>
-        <p><strong>Average Enemies Died:</strong> ${avgEnemiesDied.toFixed(0)}</p>
-        <p><strong>Players Elimination Percentage:</strong> ${playersEliminationPercent.toFixed(2)}%</p>
-        <p><strong>Enemies Elimination Percentage:</strong> ${enemiesEliminationPercent.toFixed(2)}%</p>
-        <p><strong>Average Elimination Turn:</strong> ${avgEliminationTurn.toFixed(0)}</p>
+        <p style="text-align: center; font-size: 1.2em; margin-bottom: 15px;">
+          <strong>Average Elimination Turn:</strong> ${avgEliminationTurn.toFixed(0)}
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Players</th>
+              <th>Enemies</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Avg. Died:</strong> ${avgPlayersDied.toFixed(0)}</td>
+              <td><strong>Avg. Died:</strong> ${avgEnemiesDied.toFixed(0)}</td>
+            </tr>
+            <tr>
+              <td><strong>Avg. Dmg Taken:</strong> ${avgDamageToPlayersPerUnit.toFixed(2)}</td>
+              <td><strong>Avg. Dmg Taken:</strong> ${avgDamageToEnemiesPerUnit.toFixed(2)}</td>
+            </tr>
+            <tr>
+              <td><strong>Elimination %:</strong> ${(playersEliminationCount / simulationCount * 100).toFixed(2)}%</td>
+              <td><strong>Elimination %:</strong> ${(enemiesEliminationCount / simulationCount * 100).toFixed(2)}%</td>
+            </tr>
+          </tbody>
+        </table>
       `;
+
     }
+
 
     function simulateCombat() {
       let players = collectCharacters('playersTable');
