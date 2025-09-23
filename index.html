@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <!-- Viewport meta tag for responsive design -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Traveller RPG Combat Un-Balancer</title>
   <style>
@@ -47,8 +47,7 @@
       flex-direction: column;
       align-items: center;
       gap: 20px;
-      margin-bottom: 20px;
-      margin-top: 20px;
+      margin: 20px 0;
     }
 
     .multi-sim {
@@ -74,7 +73,7 @@
     }
 
     .simulation-controls button {
-      width: 200px; /* Set a consistent width for all buttons */
+      width: 200px;
       padding: 10px 15px;
       border: none;
       border-radius: 4px;
@@ -87,10 +86,6 @@
 
     .simulation-controls button:hover {
       background-color: #00d1c1;
-    }
-
-    .single-sim {
-      /* Single simulation section is centered by parent flex settings */
     }
 
     .container {
@@ -126,7 +121,8 @@
       table-layout: fixed;
     }
 
-    th, td {
+    th,
+    td {
       padding: 8px;
       border: 1px solid #333;
       text-align: center;
@@ -193,7 +189,8 @@
       text-align: center;
     }
 
-    .results p, .results h3 {
+    .results p,
+    .results h3 {
       margin-bottom: 10px;
       color: #e0e0e0;
     }
@@ -218,12 +215,16 @@
         width: 100%;
         margin-bottom: 20px;
       }
+
       .container {
         flex-direction: column;
       }
-      th, td {
+
+      th,
+      td {
         font-size: 0.7rem;
       }
+
       .multi-sim {
         flex-direction: column;
         align-items: center;
@@ -238,17 +239,22 @@
     }
   </style>
 </head>
+
 <body>
   <h1>Traveller RPG Combat Un-Balancer</h1>
   <p class="subtitle">Space is Hell... War is even worse...</p>
   <p>
-    This is a naive Traveller RPG combat calculator. It does not account for missed shots, multiple weapons, dodging, taking cover, etc.
+    This is a naive Traveller RPG combat calculator. It does not account for missed shots, multiple weapons, dodging,
+    taking cover, etc.
     Its primary purpose is to ensure your enemies don't get annihilated in the first round.
   </p>
   <h3>Instructions:</h3>
   <ul class="instructions">
     <li><strong>HP:</strong> Enter the total sum of END + DEX + STR.</li>
     <li><strong>Damage:</strong> Enter it in the form of 1D, 2D+3, 3D-2, etc...</li>
+    <li><strong>Rate of Fire:</strong> Number of times to roll damage per turn (default: 1).</li>
+    <li><strong>DM to Attack:</strong> Dice modifier for attack rolls. Each attack rolls 2d6 + DM, hits on 8+ (default:
+      0).</li>
   </ul>
   <div class="container">
     <div class="column" id="playersColumn">
@@ -260,12 +266,12 @@
             <th>Armor</th>
             <th>Damage</th>
             <th>AP</th>
+            <th>Rate of Fire</th>
+            <th>DM to Attack</th>
             <th>Remove</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- Player rows will go here -->
-        </tbody>
+        <tbody></tbody>
       </table>
       <button onclick="addCharacter('playersTable')">Add Player</button>
     </div>
@@ -279,12 +285,12 @@
             <th>Armor</th>
             <th>Damage</th>
             <th>AP</th>
+            <th>Rate of Fire</th>
+            <th>DM to Attack</th>
             <th>Remove</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- Enemy rows will go here -->
-        </tbody>
+        <tbody></tbody>
       </table>
       <button onclick="addCharacter('enemiesTable')">Add Enemy</button>
     </div>
@@ -293,184 +299,219 @@
   <div class="simulation-controls">
     <div class="multi-sim">
       <label for="simulationCount">Number of Simulations:</label>
-      <input id="simulationCount" type="number" value="1000" min="1">
-      <button onclick="runSimulations()">Run Multiple Simulations</button>
-    </div>
-    <div class="single-sim">
-      <button onclick="simulateCombat()">Run Single Simulation</button>
+      <input id="simulationCount" type="number" value="10000" min="1">
+      <button onclick="runSimulations()">Run Simulations</button>
     </div>
   </div>
 
-  <div class="results" id="resultsArea">
-    <!-- Simulation results will appear here -->
-  </div>
+  <div class="results" id="resultsArea"></div>
 
   <script>
-    // Utility: Shuffle an array in place
+    // ---- Utilities ----
     function shuffle(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
+      for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[array[i], array[j]] = [array[j], array[i]]; }
     }
 
     function addCharacter(tableId) {
       const table = document.getElementById(tableId).getElementsByTagName('tbody')[0];
       const row = table.insertRow();
-      const fields = ['hp', 'armor', 'damage', 'ap'];
+      const fields = ['hp', 'armor', 'damage', 'ap', 'rof', 'dm'];
       fields.forEach(() => {
         const cell = row.insertCell();
         const input = document.createElement('input');
         input.type = (fields[cell.cellIndex] === 'damage') ? 'text' : 'number';
         input.required = true;
-        input.placeholder = fields[cell.cellIndex].toUpperCase();
+        let placeholder = fields[cell.cellIndex].toUpperCase();
+        if (fields[cell.cellIndex] === 'rof') placeholder = 'ROF';
+        if (fields[cell.cellIndex] === 'dm') placeholder = 'DM';
+        input.placeholder = placeholder;
         input.style.width = '90%';
+        if (fields[cell.cellIndex] === 'rof') {
+          input.value = '1'; // Default rate of fire to 1
+          input.min = '1';
+        }
+        if (fields[cell.cellIndex] === 'dm') {
+          input.value = '0'; // Default DM to 0
+        }
         cell.appendChild(input);
       });
       const removeCell = row.insertCell();
       const removeBtn = document.createElement('button');
-      removeBtn.textContent = 'X';
-      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = 'X'; removeBtn.className = 'remove-btn';
       removeBtn.onclick = () => table.deleteRow(row.rowIndex - 1);
       removeCell.appendChild(removeBtn);
     }
 
-    function parseDamage(damageStr) {
-      const regex = /(\d+)[dD]\s*([+-]\s*\d+)?/;
-      const match = damageStr.match(regex);
-      if (match) {
-        const diceCount = parseFloat(match[1] || 0);
-        const modifier = match[2] ? parseFloat(match[2].replace(/\s+/g, '')) : 0;
-        return diceCount * 3.5 + modifier;
-      }
-      return 0;
+    // Parse like "2D+1", returns {dice, mod}
+    function parseDamageSpec(damageStr) {
+      const regex = /^(\d+)[dD]\s*([+-]\s*\d+)?$/;
+      const match = (damageStr || '').trim().match(regex);
+      if (!match) return { dice: 0, mod: 0 };
+      const dice = parseInt(match[1], 10) || 0;
+      const mod = match[2] ? parseInt(match[2].replace(/\s+/g, ''), 10) : 0;
+      return { dice, mod };
     }
+
+
+    // Roll actual damage for a given spec (sum of d6 plus mod)
+    function rollDamage(spec) {
+      let total = spec.mod;
+      for (let i = 0; i < spec.dice; i++) total += 1 + Math.floor(Math.random() * 6);
+      return total;
+    }
+
+    // Roll 2d6 + DM and check if attack hits (8+)
+    function rollAttack(dm) {
+      const roll1 = 1 + Math.floor(Math.random() * 6);
+      const roll2 = 1 + Math.floor(Math.random() * 6);
+      const total = roll1 + roll2 + dm;
+      return total >= 8;
+    }
+
 
     function collectCharacters(tableId) {
       const table = document.getElementById(tableId);
       const rows = table.getElementsByTagName('tbody')[0].rows;
-      let characters = [];
+      const characters = [];
       for (let row of rows) {
         const cells = row.cells;
         const hp = parseFloat(cells[0].firstChild.value) || 0;
         const armor = parseFloat(cells[1].firstChild.value) || 0;
-        const damageStr = cells[2].firstChild.value || "0";
+        const damageStr = cells[2].firstChild.value || '0';
         const ap = parseFloat(cells[3].firstChild.value) || 0;
-        characters.push({
-          hp,
-          armor,
-          damage: parseDamage(damageStr),
-          ap
-        });
+        const rof = parseInt(cells[4].firstChild.value) || 1;
+        const dm = parseInt(cells[5].firstChild.value) || 0;
+        const spec = parseDamageSpec(damageStr);
+        characters.push({ hp, armor, damageSpec: spec, ap, rof, dm });
       }
       return characters;
     }
 
+    // ---- Multiple Simulations (now with rolled damage) ----
     function runSimulations() {
-      let simulationCount = parseInt(document.getElementById('simulationCount').value) || 1;
-      let playersBase = collectCharacters('playersTable');
-      let enemiesBase = collectCharacters('enemiesTable');
+      const simulationCount = Math.max(1, parseInt(document.getElementById('simulationCount').value) || 1);
+      const playersBase = collectCharacters('playersTable');
+      const enemiesBase = collectCharacters('enemiesTable');
+      if (playersBase.length === 0 || enemiesBase.length === 0) { alert('Please add at least one player and one enemy.'); return; }
 
-      if (playersBase.length === 0 || enemiesBase.length === 0) {
-        alert('Please add at least one player and one enemy.');
-        return;
-      }
-
-      let totalPlayersDiedSum = 0;
-      let totalEnemiesDiedSum = 0;
-      let playersEliminationCount = 0;
-      let enemiesEliminationCount = 0;
-      let totalEliminationTurnSum = 0;
-      let totalDamageToPlayers = 0;
-      let totalDamageToEnemies = 0;
+      let totalPlayersDiedSum = 0, totalEnemiesDiedSum = 0;
+      let playersEliminationCount = 0, enemiesEliminationCount = 0;
+      let totalDamageToPlayers = 0, totalDamageToEnemies = 0;
+      const roundsPerRun = [];
 
       for (let run = 0; run < simulationCount; run++) {
-        let playersAlive = playersBase.map(p => ({ ...p }));
-        let enemiesAlive = enemiesBase.map(e => ({ ...e }));
-        let totalPlayersDied = 0;
-        let totalEnemiesDied = 0;
-        let turn = 0;
+        let playersAlive = playersBase.map(p => ({ ...p, hp: p.hp }));
+        let enemiesAlive = enemiesBase.map(e => ({ ...e, hp: e.hp }));
+        let totalPlayersDied = 0, totalEnemiesDied = 0; let turn = 0;
 
         while (playersAlive.length > 0 && enemiesAlive.length > 0) {
           turn++;
-          let initiativeOrder = playersAlive.map(p => ({ type: 'player', actor: p }))
-              .concat(enemiesAlive.map(e => ({ type: 'enemy', actor: e })));
-          shuffle(initiativeOrder);
+          const initiative = playersAlive.map(p => ({ type: 'player', actor: p }))
+            .concat(enemiesAlive.map(e => ({ type: 'enemy', actor: e })));
+          shuffle(initiative);
 
-          for (let combatant of initiativeOrder) {
+          for (const combatant of initiative) {
             if (combatant.type === 'player') {
               if (enemiesAlive.length === 0) break;
               if (!playersAlive.includes(combatant.actor)) continue;
+              const attacker = combatant.actor;
+              const targetIndex = Math.floor(Math.random() * enemiesAlive.length);
+              const target = enemiesAlive[targetIndex];
+              const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
 
-              let attacker = combatant.actor;
-              let targetIndex = Math.floor(Math.random() * enemiesAlive.length);
-              let target = enemiesAlive[targetIndex];
-              let effectiveArmor = Math.max(target.armor - attacker.ap, 0);
-              let netDamage = Math.max(attacker.damage - effectiveArmor, 0);
-              totalDamageToEnemies += netDamage;
-              target.hp -= netDamage;
-              if (target.hp <= 0) {
-                enemiesAlive.splice(targetIndex, 1);
-                totalEnemiesDied++;
+              // Roll damage multiple times based on rate of fire
+              for (let shot = 0; shot < attacker.rof; shot++) {
+                if (target.hp <= 0) break; // Target already dead
+
+                // Roll to hit first
+                if (rollAttack(attacker.dm)) {
+                  const rolled = rollDamage(attacker.damageSpec);
+                  const netDamage = Math.max(rolled - effectiveArmor, 0);
+                  totalDamageToEnemies += netDamage;
+                  target.hp -= netDamage;
+                  if (target.hp <= 0) {
+                    enemiesAlive.splice(targetIndex, 1);
+                    totalEnemiesDied++;
+                    break; // Target eliminated, stop shooting
+                  }
+                }
+                // If attack misses, no damage is dealt
               }
             } else {
               if (playersAlive.length === 0) break;
               if (!enemiesAlive.includes(combatant.actor)) continue;
+              const attacker = combatant.actor;
+              const targetIndex = Math.floor(Math.random() * playersAlive.length);
+              const target = playersAlive[targetIndex];
+              const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
 
-              let attacker = combatant.actor;
-              let targetIndex = Math.floor(Math.random() * playersAlive.length);
-              let target = playersAlive[targetIndex];
-              let effectiveArmor = Math.max(target.armor - attacker.ap, 0);
-              let netDamage = Math.max(attacker.damage - effectiveArmor, 0);
-              totalDamageToPlayers += netDamage;
-              target.hp -= netDamage;
-              if (target.hp <= 0) {
-                playersAlive.splice(targetIndex, 1);
-                totalPlayersDied++;
+              // Roll damage multiple times based on rate of fire
+              for (let shot = 0; shot < attacker.rof; shot++) {
+                if (target.hp <= 0) break; // Target already dead
+
+                // Roll to hit first
+                if (rollAttack(attacker.dm)) {
+                  const rolled = rollDamage(attacker.damageSpec);
+                  const netDamage = Math.max(rolled - effectiveArmor, 0);
+                  totalDamageToPlayers += netDamage;
+                  target.hp -= netDamage;
+                  if (target.hp <= 0) {
+                    playersAlive.splice(targetIndex, 1);
+                    totalPlayersDied++;
+                    break; // Target eliminated, stop shooting
+                  }
+                }
+                // If attack misses, no damage is dealt
               }
             }
           }
         }
 
-        totalPlayersDiedSum += totalPlayersDied;
-        totalEnemiesDiedSum += totalEnemiesDied;
+        totalPlayersDiedSum += totalPlayersDied; totalEnemiesDiedSum += totalEnemiesDied;
         if (playersAlive.length === 0) playersEliminationCount++;
         if (enemiesAlive.length === 0) enemiesEliminationCount++;
-        totalEliminationTurnSum += turn;
+        roundsPerRun.push(turn);
       }
 
-      let avgPlayersDied = totalPlayersDiedSum / simulationCount;
-      let avgEnemiesDied = totalEnemiesDiedSum / simulationCount;
-      let avgEliminationTurn = totalEliminationTurnSum / simulationCount;
+      // Stats for rounds
+      const minRounds = Math.min(...roundsPerRun);
+      const maxRounds = Math.max(...roundsPerRun);
+      const avgRounds = roundsPerRun.reduce((a, b) => a + b, 0) / roundsPerRun.length;
 
-      let totalPlayerUnits = playersBase.length * simulationCount;
-      let totalEnemyUnits = enemiesBase.length * simulationCount;
+      const avgPlayersDied = totalPlayersDiedSum / simulationCount;
+      const avgEnemiesDied = totalEnemiesDiedSum / simulationCount;
 
-      let avgDamageToPlayersPerUnit = totalDamageToPlayers / totalPlayerUnits;
-      let avgDamageToEnemiesPerUnit = totalDamageToEnemies / totalEnemyUnits;
+      const totalPlayerUnits = playersBase.length * simulationCount;
+      const totalEnemyUnits = enemiesBase.length * simulationCount;
+
+      const avgDamageToPlayersPerUnit = totalDamageToPlayers / totalPlayerUnits;
+      const avgDamageToEnemiesPerUnit = totalDamageToEnemies / totalEnemyUnits;
 
       const resultsArea = document.getElementById('resultsArea');
       resultsArea.innerHTML = `
         <h2>Aggregate Simulation Results (over ${simulationCount} runs)</h2>
-        <p style="text-align: center; font-size: 1.2em; margin-bottom: 15px;">
-          <strong>Average Elimination Turn:</strong> ${avgEliminationTurn.toFixed(0)}
-        </p>
+        <table>
+          <thead>
+            <tr><th colspan="3">Rounds Until One Side Eliminated</th></tr>
+            <tr><th>Min</th><th>Average</th><th>Max</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>${minRounds}</td><td>${avgRounds.toFixed(2)}</td><td>${maxRounds}</td></tr>
+          </tbody>
+        </table>
 
         <table>
           <thead>
-            <tr>
-              <th>Players</th>
-              <th>Enemies</th>
-            </tr>
+            <tr><th>Players</th><th>Enemies</th></tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>Avg. Died:</strong> ${avgPlayersDied.toFixed(0)}</td>
-              <td><strong>Avg. Died:</strong> ${avgEnemiesDied.toFixed(0)}</td>
+              <td><strong>Avg. Died:</strong> ${avgPlayersDied.toFixed(2)}</td>
+              <td><strong>Avg. Died:</strong> ${avgEnemiesDied.toFixed(2)}</td>
             </tr>
             <tr>
-              <td><strong>Avg. Dmg Taken:</strong> ${avgDamageToPlayersPerUnit.toFixed(2)}</td>
-              <td><strong>Avg. Dmg Taken:</strong> ${avgDamageToEnemiesPerUnit.toFixed(2)}</td>
+              <td><strong>Avg. Dmg Taken / unit:</strong> ${avgDamageToPlayersPerUnit.toFixed(2)}</td>
+              <td><strong>Avg. Dmg Taken / unit:</strong> ${avgDamageToEnemiesPerUnit.toFixed(2)}</td>
             </tr>
             <tr>
               <td><strong>Elimination %:</strong> ${(playersEliminationCount / simulationCount * 100).toFixed(2)}%</td>
@@ -479,122 +520,9 @@
           </tbody>
         </table>
       `;
-
     }
 
-
-    function simulateCombat() {
-      let players = collectCharacters('playersTable');
-      for (let i = 0; i < players.length; i++) {
-        players[i].id = i + 1;
-      }
-      let enemies = collectCharacters('enemiesTable');
-      for (let j = 0; j < enemies.length; j++) {
-        enemies[j].id = j + 1;
-      }
-
-      if (players.length === 0 || enemies.length === 0) {
-        alert('Please add at least one player and one enemy.');
-        return;
-      }
-
-      let turn = 0;
-      let firstPlayerDeathTurn = null;
-      let firstEnemyDeathTurn = null;
-
-      let totalPlayersDied = 0;
-      let totalEnemiesDied = 0;
-      let allLogs = [];
-
-      let playersAlive = players.map(p => ({ ...p }));
-      let enemiesAlive = enemies.map(e => ({ ...e }));
-
-      while (playersAlive.length > 0 && enemiesAlive.length > 0) {
-        turn++;
-        let turnLogs = [];
-
-        // Combine and shuffle initiative order
-        let initiativeOrder = playersAlive.map(p => ({ type: 'player', actor: p }))
-            .concat(enemiesAlive.map(e => ({ type: 'enemy', actor: e })));
-        shuffle(initiativeOrder);
-
-        for (let combatant of initiativeOrder) {
-          if (combatant.type === 'player') {
-            if (enemiesAlive.length === 0) break;
-            if (!playersAlive.includes(combatant.actor)) continue;
-
-            const attacker = combatant.actor;
-            const targetIndex = Math.floor(Math.random() * enemiesAlive.length);
-            const target = enemiesAlive[targetIndex];
-
-            const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
-            const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
-            target.hp -= netDamage;
-
-            let attackerLabel = `Player ${attacker.id}`;
-            let targetLabel = `Enemy ${target.id}`;
-            let event = `${attackerLabel} attacked ${targetLabel} for ${netDamage.toFixed(2)} damage.`;
-            if (target.hp <= 0) {
-              event += ` ${targetLabel} died.`;
-              enemiesAlive.splice(targetIndex, 1);
-              totalEnemiesDied++;
-            }
-            turnLogs.push(event);
-          } else {
-            if (playersAlive.length === 0) break;
-            if (!enemiesAlive.includes(combatant.actor)) continue;
-
-            const attacker = combatant.actor;
-            const targetIndex = Math.floor(Math.random() * playersAlive.length);
-            const target = playersAlive[targetIndex];
-
-            const effectiveArmor = Math.max(target.armor - attacker.ap, 0);
-            const netDamage = Math.max(attacker.damage - effectiveArmor, 0);
-            target.hp -= netDamage;
-
-            let attackerLabel = `Enemy ${attacker.id}`;
-            let targetLabel = `Player ${target.id}`;
-            let event = `${attackerLabel} attacked ${targetLabel} for ${netDamage.toFixed(2)} damage.`;
-            if (target.hp <= 0) {
-              event += ` ${targetLabel} died.`;
-              playersAlive.splice(targetIndex, 1);
-              totalPlayersDied++;
-            }
-            turnLogs.push(event);
-          }
-        }
-
-        if (firstPlayerDeathTurn === null && totalPlayersDied > 0) {
-          firstPlayerDeathTurn = turn;
-        }
-        if (firstEnemyDeathTurn === null && totalEnemiesDied > 0) {
-          firstEnemyDeathTurn = turn;
-        }
-
-        allLogs.push(`Turn ${turn}:\n` + turnLogs.join("\n"));
-      }
-
-      let eliminatedSide = '';
-      if (playersAlive.length === 0 && enemiesAlive.length === 0) {
-        eliminatedSide = 'Both sides eliminated simultaneously';
-      } else if (playersAlive.length === 0) {
-        eliminatedSide = 'Players eliminated';
-      } else if (enemiesAlive.length === 0) {
-        eliminatedSide = 'Enemies eliminated';
-      }
-
-      const resultsArea = document.getElementById('resultsArea');
-      resultsArea.innerHTML = `
-        <h2>Simulation Results</h2>
-        <p><strong>Total Players Died:</strong> ${totalPlayersDied}</p>
-        <p><strong>Total Enemies Died:</strong> ${totalEnemiesDied}</p>
-        <p><strong>${eliminatedSide}</strong> on turn ${turn}.</p>
-        <h3>Turn-by-Turn Log</h3>
-        <div class="scrollable">
-          <pre>${allLogs.join("\n\n")}</pre>
-        </div>
-      `;
-    }
   </script>
 </body>
+
 </html>
