@@ -368,6 +368,45 @@
       return total >= 8;
     }
 
+    // P(2d6 + dm >= 8) for hit chance
+    function hitChance(dm) {
+      const need = 8 - dm;
+      if (need <= 2) return 1;
+      if (need > 12) return 0;
+      let ways = 0;
+      for (let d1 = 1; d1 <= 6; d1++) {
+        for (let d2 = 1; d2 <= 6; d2++) {
+          if (d1 + d2 >= need) ways++;
+        }
+      }
+      return ways / 36;
+    }
+
+    // Expected value of damage dice (e.g. 2D+1 => 8)
+    function expectedDamageRoll(spec) {
+      return spec.dice * 3.5 + spec.mod;
+    }
+
+    // EDPR for one attacker vs a given effective armor (average of opposing side after AP)
+    function attackerEDPR(attacker, avgEffectiveArmor) {
+      const hc = hitChance(attacker.dm);
+      const expectedDmg = Math.max(0, expectedDamageRoll(attacker.damageSpec) - avgEffectiveArmor);
+      return hc * expectedDmg * (attacker.rof || 1);
+    }
+
+    // Compute side totals: total HP, total EDPR (sum of each attacker's EDPR vs opposing side's avg effective defense)
+    function sideTotals(attackers, defenders) {
+      const totalHP = defenders.reduce((s, u) => s + (parseFloat(u.hp) || 0), 0);
+      const avgDefenderArmor = defenders.length
+        ? defenders.reduce((s, u) => s + (parseFloat(u.armor) || 0), 0) / defenders.length
+        : 0;
+      let totalEDPR = 0;
+      for (const a of attackers) {
+        const effectiveArmor = Math.max(0, avgDefenderArmor - (parseFloat(a.ap) || 0));
+        totalEDPR += attackerEDPR(a, effectiveArmor);
+      }
+      return { totalHP, totalEDPR };
+    }
 
     function collectCharacters(tableId) {
       const table = document.getElementById(tableId);
@@ -487,12 +526,43 @@
       const avgDamageToPlayersPerUnit = totalDamageToPlayers / totalPlayerUnits;
       const avgDamageToEnemiesPerUnit = totalDamageToEnemies / totalEnemyUnits;
 
+      // ---- Deterministic balance metrics (EDPR vs opposing side's avg effective defense) ----
+      const playersTotals = sideTotals(playersBase, enemiesBase);  // players as attackers, enemies as defenders
+      const enemiesTotals = sideTotals(enemiesBase, playersBase);  // enemies as attackers, players as defenders
+      const playersTotalHP = enemiesTotals.totalHP;  // defenders when enemies attack = players' HP
+      const enemiesTotalHP = playersTotals.totalHP;  // defenders when players attack = enemies' HP
+      const playersEDPR = playersTotals.totalEDPR;
+      const enemiesEDPR = enemiesTotals.totalEDPR;
+      const damageRatio = enemiesEDPR > 0 ? playersEDPR / enemiesEDPR : (playersEDPR > 0 ? Infinity : 1);
+      const roundsToDefeatEnemies = playersEDPR > 0 ? enemiesTotalHP / playersEDPR : Infinity;
+      const roundsToDefeatPlayers = enemiesEDPR > 0 ? playersTotalHP / enemiesEDPR : Infinity;
+
+      const fmt = (x) => (Number.isFinite(x) ? x.toFixed(2) : '∞');
+      const ratioFavored = damageRatio > 1 ? 'Players favored' : damageRatio < 1 ? 'Enemies favored' : 'Even';
+
       const resultsArea = document.getElementById('resultsArea');
       resultsArea.innerHTML = `
         <h2>Aggregate Simulation Results (over ${simulationCount} runs)</h2>
+
         <table>
           <thead>
-            <tr><th colspan="3">Rounds Until One Side Eliminated</th></tr>
+            <tr><th>Damage Per Round (Side Total)</th><th>Estimated Rounds To Defeat</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Players:</strong> ${playersEDPR.toFixed(2)}</td>
+              <td>Players defeat enemies in <strong>${fmt(roundsToDefeatEnemies)}</strong> rounds</td>
+            </tr>
+            <tr>
+              <td><strong>Enemies:</strong> ${enemiesEDPR.toFixed(2)}</td>
+              <td>Enemies defeat players in <strong>${fmt(roundsToDefeatPlayers)}</strong> rounds</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="color:#00ffea; margin: 16px 0 8px 0;">Rounds Until One Side Eliminated</h3>
+        <table>
+          <thead>
             <tr><th>Min</th><th>Average</th><th>Max</th></tr>
           </thead>
           <tbody>
